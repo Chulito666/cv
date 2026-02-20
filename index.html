@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Giuliano Rubino — Analista Financiero & Trader</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:        #080c18;
+      --bg2:       #0d1225;
+      --bg3:       #111827;
+      --gold:      #c9a84c;
+      --gold-l:    #e8c46a;
+      --blue:      #1e3a5f;
+      --blue-l:    #2563eb;
+      --text:      #e2e8f0;
+      --text2:     #94a3b8;
+      --muted:     #4b5563;
+      --green:     #10b981;
+      --red:       #ef4444;
+      --border:    #1e2d45;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Canvas background ── */
+    #bg-canvas {
+      position: fixed; inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.08;
+    }
+
+    /* ── Floating Bitcoin ── */
+    #btc-layer {
+      position: fixed; inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .btc-symbol {
+      position: absolute;
+      color: var(--gold);
+      opacity: 0;
+      font-weight: 700;
+      animation: floatUp linear infinite;
+      user-select: none;
+    }
+    @keyframes floatUp {
+      0%   { transform: translateY(100vh) rotate(0deg);   opacity: 0; }
+      8%   { opacity: 0.06; }
+      92%  { opacity: 0.06; }
+      100% { transform: translateY(-120px) rotate(360deg); opacity: 0; }
+    }
+
+    /* ── Ticker ── */
+    .ticker-wrap {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      overflow: hidden;
+      height: 38px;
+      display: flex;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .ticker-inner {
+      display: flex;
+      white-space: nowrap;
+      animation: slide 30s linear infinite;
+    }
+    .tick-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 28px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: .5px;
+    }
+    .tick-name  { color: var(--text2); }
+    .tick-price { color: var(--text); }
+    .tick-up    { color: var(--green); }
+    .tick-dn    { color: var(--red); }
+    .tick-sep   { color: var(--border); margin: 0 4px; }
+    @keyframes slide {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+
+    /* ── Layout ── */
+    .wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 36px 20px 60px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      display: grid;
+      grid-template-columns: 170px 1fr;
+      gap: 36px;
+      align-items: center;
+      background: linear-gradient(135deg, #0d1629 0%, #162040 55%, #0d1629 100%);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 44px 40px;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '₿';
+      position: absolute;
+      right: 24px; top: 10px;
+      font-size: 9rem;
+      color: var(--gold);
+      opacity: 0.04;
+      font-weight: 900;
+      pointer-events: none;
+    }
+    /* animated gold top border */
+    .hero::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold), var(--blue-l), var(--gold), transparent);
+      background-size: 200% 100%;
+      animation: shimmer 4s linear infinite;
+    }
+    @keyframes shimmer {
+      0%   { background-position: -200% 0; }
+      100% { background-position:  200% 0; }
+    }
+
+    .avatar {
+      width: 150px; height: 150px;
+      border-radius: 50%;
+      border: 3px solid var(--gold);
+      background: radial-gradient(circle at 40% 35%, #1e3a5f, #080c18);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 4.5rem;
+      color: var(--gold);
+      box-shadow: 0 0 40px rgba(201,168,76,.25);
+      flex-shrink: 0;
+    }
+
+    .hero-name {
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--text);
+      line-height: 1.15;
+    }
+    .hero-role {
+      font-size: .85rem;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin: 8px 0 18px;
+    }
+    .contacts { display: flex; flex-direction: column; gap: 8px; }
+    .c-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: .88rem; color: var(--text2);
+    }
+    .c-item span.ic { color: var(--gold); width: 18px; text-align: center; }
+
+    /* ── Stats ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 22px 16px;
+      text-align: center;
+      transition: border-color .25s;
+    }
+    .stat:hover { border-color: rgba(201,168,76,.35); }
+    .stat-val {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--gold);
+      line-height: 1;
+    }
+    .stat-lbl {
+      font-size: .72rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 6px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 30px 30px 30px 34px;
+      margin-bottom: 22px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color .25s;
+    }
+    .card:hover { border-color: rgba(201,168,76,.3); }
+    .card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--gold) 0%, transparent 100%);
+      border-radius: 14px 0 0 14px;
+    }
+
+    .sec-title {
+      font-size: 1rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2.5px;
+      color: var(--gold);
+      margin-bottom: 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sec-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--border), transparent);
+    }
+
+    /* ── About ── */
+    .about-text { color: var(--text2); font-size: .93rem; line-height: 1.85; }
+    .about-text + .about-text { margin-top: 14px; }
+
+    /* ── Skills ── */
+    .skills-wrap { display: flex; flex-wrap: wrap; gap: 10px; }
+    .skill {
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 600;
+      border: 1px solid;
+      transition: all .2s;
+    }
+    .skill.fin {
+      background: rgba(37,99,235,.1);
+      border-color: rgba(37,99,235,.35);
+      color: #93c5fd;
+    }
+    .skill.fin:hover {
+      background: rgba(37,99,235,.2);
+      border-color: rgba(37,99,235,.6);
+    }
+    .skill.crypto {
+      background: rgba(201,168,76,.1);
+      border-color: rgba(201,168,76,.35);
+      color: var(--gold-l);
+    }
+    .skill.crypto:hover {
+      background: rgba(201,168,76,.2);
+      border-color: rgba(201,168,76,.6);
+    }
+    .skill.mgmt {
+      background: rgba(16,185,129,.08);
+      border-color: rgba(16,185,129,.3);
+      color: #6ee7b7;
+    }
+
+    /* ── Experience ── */
+    .exp-list { display: flex; flex-direction: column; gap: 0; }
+    .exp-item {
+      padding: 22px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .exp-item:first-child { padding-top: 0; }
+    .exp-item:last-child  { padding-bottom: 0; border-bottom: none; }
+
+    .exp-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 4px;
+    }
+    .exp-title { font-size: 1rem; font-weight: 700; color: var(--text); }
+    .exp-period {
+      font-size: .76rem;
+      font-weight: 600;
+      color: var(--gold);
+      background: rgba(201,168,76,.1);
+      border: 1px solid rgba(201,168,76,.25);
+      padding: 3px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .exp-co { font-size: .82rem; color: var(--muted); margin-bottom: 12px; }
+    .exp-bullets { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+    .exp-bullets li {
+      display: flex; gap: 10px;
+      font-size: .88rem; color: var(--text2);
+    }
+    .exp-bullets li::before { content: '▸'; color: var(--gold); flex-shrink: 0; margin-top: 2px; }
+
+    /* ── Education ── */
+    .edu-list { display: flex; flex-direction: column; gap: 13px; }
+    .edu-row {
+      display: flex; align-items: flex-start; gap: 13px;
+      font-size: .9rem; color: var(--text2);
+    }
+    .edu-row .ic { color: var(--gold); font-size: 1rem; flex-shrink: 0; }
+
+    /* ── Languages ── */
+    .lang-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .lang-card {
+      background: var(--blue);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+    }
+    .lang-name { font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .lang-lv { font-size: .82rem; color: var(--muted); }
+
+    /* ── Mini animated chart canvas inside skills ── */
+    #mini-chart {
+      display: block;
+      width: 100%;
+      height: 55px;
+      margin-top: 18px;
+      border-radius: 8px;
+      opacity: .7;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 30px 0 10px;
+      font-size: .78rem;
+      color: var(--muted);
+    }
+    .footer span { color: var(--gold); }
+
+    /* ── Responsive ── */
+    @media (max-width: 620px) {
+      .hero {
+        grid-template-columns: 1fr;
+        text-align: center;
+        padding: 36px 24px;
+      }
+      .avatar { margin: 0 auto; }
+      .contacts { align-items: center; }
+      .stats-row { grid-template-columns: 1fr; }
+      .exp-head { flex-direction: column; }
+      .lang-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Background chart canvas -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- Floating ₿ -->
+<div id="btc-layer"></div>
+
+<!-- Ticker tape -->
+<div class="ticker-wrap">
+  <div class="ticker-inner" id="ticker"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- ── HERO ── -->
+  <div class="hero">
+    <div class="avatar">₿</div>
+    <div>
+      <div class="hero-name">Giuliano Rubino</div>
+      <div class="hero-role">Analista Financiero &amp; Trader</div>
+      <div class="contacts">
+        <div class="c-item"><span class="ic">📍</span> Neuquén, Argentina</div>
+        <div class="c-item"><span class="ic">✉</span> grubino666@gmail.com</div>
+        <div class="c-item"><span class="ic">☎</span> +54 299 429-7942</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── STATS ── -->
+  <div class="stats-row">
+    <div class="stat">
+      <div class="stat-val">+15</div>
+      <div class="stat-lbl">Años de experiencia</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">3+</div>
+      <div class="stat-lbl">Años en trading</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">₿</div>
+      <div class="stat-lbl">Futuros Crypto</div>
+    </div>
+  </div>
+
+  <!-- ── ABOUT ── -->
+  <div class="card">
+    <div class="sec-title">◈ Acerca de</div>
+    <p class="about-text">
+      Proactivo con amplia experiencia en trabajo en equipo y gestión de personal.
+      Me destaco por mi capacidad de adaptación a diferentes tareas y entornos laborales,
+      con un enfoque orientado a resultados y capacitación constante.
+    </p>
+    <p class="about-text" style="margin-top:14px">
+      Apasionado por el trading de activos y con experiencia personal en el mercado de futuros
+      de criptomonedas, mi objetivo profesional es especializarme en la gestión y optimización
+      de carteras de inversión, implementar mis conocimientos actuales, capacitarme
+      constantemente y ampliar mis conocimientos en el mercado bursátil.
+    </p>
+  </div>
+
+  <!-- ── SKILLS ── -->
+  <div class="card">
+    <div class="sec-title">◈ Habilidades</div>
+    <div class="skills-wrap">
+      <span class="skill crypto">₿ Futuros Crypto</span>
+      <span class="skill crypto">₿ Scalping</span>
+      <span class="skill crypto">Criptomonedas</span>
+      <span class="skill fin">Análisis Técnico</span>
+      <span class="skill fin">Análisis Fundamental</span>
+      <span class="skill fin">Psicología del Trading</span>
+      <span class="skill fin">Trading Intradía</span>
+      <span class="skill fin">CEDEARs</span>
+      <span class="skill fin">Bonos &amp; LECAPs</span>
+      <span class="skill fin">ETFs &amp; Acciones</span>
+      <span class="skill mgmt">Gestión de Equipos</span>
+      <span class="skill mgmt">Liderazgo</span>
+      <span class="skill mgmt">Supervisión de Obra</span>
+    </div>
+    <canvas id="mini-chart"></canvas>
+  </div>
+
+  <!-- ── EXPERIENCE ── -->
+  <div class="card">
+    <div class="sec-title">◈ Experiencia</div>
+    <div class="exp-list">
+
+      <div class="exp-item">
+        <div class="exp-head">
+          <div class="exp-title">Analista Técnico y Fundamental — Mercados Financieros &amp; Criptomonedas</div>
+          <div class="exp-period">2022 — Actualidad</div>
+        </div>
+        <div class="exp-co">Independiente</div>
+        <ul class="exp-bullets">
+          <li>Scalping en futuros de criptomonedas</li>
+          <li>Trading intradía en mercado bursátil</li>
+          <li>Análisis técnico y análisis fundamental</li>
+          <li>Psicología del trading</li>
+          <li>Conocimiento de CEDEARs, bonos, LECAPs, acciones, ETFs y más</li>
+        </ul>
+      </div>
+
+      <div class="exp-item">
+        <div class="exp-head">
+          <div class="exp-title">Supervisor de Obra Civil</div>
+          <div class="exp-period">2018 — 2022</div>
+        </div>
+        <div class="exp-co">Independiente</div>
+        <ul class="exp-bullets">
+          <li>Manejo de obras civiles</li>
+          <li>Supervisor y manager de equipos de trabajo</li>
+        </ul>
+      </div>
+
+      <div class="exp-item">
+        <div class="exp-head">
+          <div class="exp-title">Supervisor de Wire-line / Cased-hole</div>
+          <div class="exp-period">2015 — 2018</div>
+        </div>
+        <div class="exp-co">Clear</div>
+        <ul class="exp-bullets">
+          <li>Supervisor de cased-hole a cargo de un equipo de más de 20 personas</li>
+        </ul>
+      </div>
+
+      <div class="exp-item">
+        <div class="exp-head">
+          <div class="exp-title">Supervisor de Wire-line / Operador de Campo</div>
+          <div class="exp-period">2012 — 2015</div>
+        </div>
+        <div class="exp-co">Geolog</div>
+        <ul class="exp-bullets">
+          <li>Supervisor de cased-hole a cargo de un equipo de 8 personas</li>
+          <li>Operador de campo</li>
+        </ul>
+      </div>
+
+      <div class="exp-item">
+        <div class="exp-head">
+          <div class="exp-title">Operador de Campo</div>
+          <div class="exp-period">2009 — 2012</div>
+        </div>
+        <div class="exp-co">Seep y Asociados</div>
+        <ul class="exp-bullets">
+          <li>Operador de equipos en pozo</li>
+          <li>Chofer de camiones</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── EDUCATION ── -->
+  <div class="card">
+    <div class="sec-title">◈ Educación &amp; Certificaciones</div>
+    <div class="edu-list">
+      <div class="edu-row"><span class="ic">🎓</span><span>Bachillerato con especialidad en Informática (2006)</span></div>
+      <div class="edu-row"><span class="ic">📈</span><span>Curso de Análisis Técnico (2023)</span></div>
+      <div class="edu-row"><span class="ic">₿</span><span>Curso de Futuros en Criptomonedas (2023)</span></div>
+      <div class="edu-row"><span class="ic">⚛</span><span>Certificación en Materiales Radiactivos (2010)</span></div>
+      <div class="edu-row"><span class="ic">💧</span><span>Certificación en Hidroguas e Hidráulica (2011)</span></div>
+      <div class="edu-row"><span class="ic">👥</span><span>Capacitación en Liderazgo de Equipos (2012)</span></div>
+    </div>
+  </div>
+
+  <!-- ── LANGUAGES ── -->
+  <div class="card">
+    <div class="sec-title">◈ Idiomas</div>
+    <div class="lang-grid">
+      <div class="lang-card">
+        <div class="lang-name">🇦🇷 Español</div>
+        <div class="lang-lv">Nativo</div>
+      </div>
+      <div class="lang-card">
+        <div class="lang-name">🇺🇸 Inglés</div>
+        <div class="lang-lv">Básico — En curso</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>₿</span> Giuliano Rubino · Analista Financiero · Neuquén, Argentina · 2024
+  </div>
+</div><!-- /wrap -->
+
+<script>
+/* ────────────────────────────────────────────────
+   1. Background animated price chart
+──────────────────────────────────────────────── */
+const bgCanvas = document.getElementById('bg-canvas');
+const bgCtx    = bgCanvas.getContext('2d');
+
+function resizeBg() {
+  bgCanvas.width  = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+}
+resizeBg();
+window.addEventListener('resize', resizeBg);
+
+const BG_POINTS = [];
+const NUM_PTS   = 100;
+let bgOffset    = 0;
+
+function seedPoints() {
+  BG_POINTS.length = 0;
+  let y = bgCanvas.height * 0.5;
+  for (let i = 0; i < NUM_PTS + 40; i++) {
+    y += (Math.random() - 0.47) * 28;
+    y  = Math.max(bgCanvas.height * 0.1, Math.min(bgCanvas.height * 0.9, y));
+    BG_POINTS.push(y);
+  }
+}
+seedPoints();
+
+function drawBgChart() {
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+  const start = Math.floor(bgOffset);
+  const pts   = BG_POINTS.slice(start, start + NUM_PTS);
+  if (pts.length < 2) return;
+
+  const step = bgCanvas.width / (pts.length - 1);
+
+  /* gradient fill */
+  bgCtx.beginPath();
+  bgCtx.moveTo(0, pts[0]);
+  pts.forEach((y, i) => {
+    if (i === 0) return;
+    bgCtx.quadraticCurveTo((i - 0.5) * step, pts[i - 1], i * step, y);
+  });
+  bgCtx.lineTo(bgCanvas.width, bgCanvas.height);
+  bgCtx.lineTo(0, bgCanvas.height);
+  bgCtx.closePath();
+  const grad = bgCtx.createLinearGradient(0, 0, 0, bgCanvas.height);
+  grad.addColorStop(0,   'rgba(201,168,76,0.35)');
+  grad.addColorStop(0.6, 'rgba(37,99,235,0.12)');
+  grad.addColorStop(1,   'rgba(201,168,76,0)');
+  bgCtx.fillStyle = grad;
+  bgCtx.fill();
+
+  /* line */
+  bgCtx.beginPath();
+  bgCtx.moveTo(0, pts[0]);
+  pts.forEach((y, i) => {
+    if (i === 0) return;
+    bgCtx.quadraticCurveTo((i - 0.5) * step, pts[i - 1], i * step, y);
+  });
+  bgCtx.strokeStyle = 'rgba(201,168,76,0.7)';
+  bgCtx.lineWidth   = 2;
+  bgCtx.stroke();
+
+  /* grid lines */
+  for (let i = 1; i < 6; i++) {
+    const gy = bgCanvas.height * (i / 6);
+    bgCtx.beginPath();
+    bgCtx.moveTo(0, gy);
+    bgCtx.lineTo(bgCanvas.width, gy);
+    bgCtx.strokeStyle = 'rgba(30,45,69,0.6)';
+    bgCtx.lineWidth   = 1;
+    bgCtx.stroke();
+  }
+
+  /* extend points */
+  bgOffset += 0.25;
+  if (bgOffset + NUM_PTS >= BG_POINTS.length - 5) {
+    let last = BG_POINTS[BG_POINTS.length - 1];
+    for (let i = 0; i < 30; i++) {
+      last += (Math.random() - 0.47) * 28;
+      last  = Math.max(bgCanvas.height * 0.1, Math.min(bgCanvas.height * 0.9, last));
+      BG_POINTS.push(last);
+    }
+  }
+
+  requestAnimationFrame(drawBgChart);
+}
+drawBgChart();
+
+/* ────────────────────────────────────────────────
+   2. Mini skill chart
+──────────────────────────────────────────────── */
+const miniCanvas = document.getElementById('mini-chart');
+const miniCtx    = miniCanvas.getContext('2d');
+const MINI_PTS   = [];
+let   miniOff    = 0;
+
+function initMini() {
+  miniCanvas.width  = miniCanvas.offsetWidth;
+  miniCanvas.height = miniCanvas.offsetHeight;
+  MINI_PTS.length = 0;
+  let y = miniCanvas.height * 0.55;
+  for (let i = 0; i < 80 + 20; i++) {
+    y += (Math.random() - 0.44) * 8;
+    y  = Math.max(6, Math.min(miniCanvas.height - 6, y));
+    MINI_PTS.push(y);
+  }
+}
+initMini();
+window.addEventListener('resize', initMini);
+
+function drawMini() {
+  miniCtx.clearRect(0, 0, miniCanvas.width, miniCanvas.height);
+  const start = Math.floor(miniOff);
+  const pts   = MINI_PTS.slice(start, start + 60);
+  if (pts.length < 2) return;
+
+  const step = miniCanvas.width / (pts.length - 1);
+
+  miniCtx.beginPath();
+  miniCtx.moveTo(0, pts[0]);
+  pts.forEach((y, i) => {
+    if (i === 0) return;
+    miniCtx.quadraticCurveTo((i - 0.5) * step, pts[i - 1], i * step, y);
+  });
+  miniCtx.lineTo(miniCanvas.width, miniCanvas.height);
+  miniCtx.lineTo(0, miniCanvas.height);
+  miniCtx.closePath();
+  const mg = miniCtx.createLinearGradient(0, 0, 0, miniCanvas.height);
+  mg.addColorStop(0, 'rgba(201,168,76,0.25)');
+  mg.addColorStop(1, 'rgba(201,168,76,0)');
+  miniCtx.fillStyle = mg;
+  miniCtx.fill();
+
+  miniCtx.beginPath();
+  miniCtx.moveTo(0, pts[0]);
+  pts.forEach((y, i) => {
+    if (i === 0) return;
+    miniCtx.quadraticCurveTo((i - 0.5) * step, pts[i - 1], i * step, y);
+  });
+  miniCtx.strokeStyle = 'rgba(201,168,76,0.8)';
+  miniCtx.lineWidth   = 1.5;
+  miniCtx.stroke();
+
+  miniOff += 0.2;
+  if (miniOff + 60 >= MINI_PTS.length - 5) {
+    let last = MINI_PTS[MINI_PTS.length - 1];
+    for (let i = 0; i < 20; i++) {
+      last += (Math.random() - 0.44) * 8;
+      last  = Math.max(6, Math.min(miniCanvas.height - 6, last));
+      MINI_PTS.push(last);
+    }
+  }
+  requestAnimationFrame(drawMini);
+}
+drawMini();
+
+/* ────────────────────────────────────────────────
+   3. Floating Bitcoin symbols
+──────────────────────────────────────────────── */
+const layer   = document.getElementById('btc-layer');
+const symbols = ['₿', '₿', '₿', '₿', '$', '📈', '₿'];
+
+function spawnBtc() {
+  const el = document.createElement('span');
+  el.className    = 'btc-symbol';
+  el.textContent  = symbols[Math.floor(Math.random() * symbols.length)];
+  el.style.left   = Math.random() * 100 + 'vw';
+  el.style.fontSize = (1.5 + Math.random() * 3.5) + 'rem';
+  const dur = 18 + Math.random() * 22;
+  el.style.animationDuration = dur + 's';
+  el.style.animationDelay    = (Math.random() * 4) + 's';
+  layer.appendChild(el);
+  setTimeout(() => el.remove(), (dur + 5) * 1000);
+}
+
+for (let i = 0; i < 18; i++) spawnBtc();
+setInterval(spawnBtc, 1800);
+
+/* ────────────────────────────────────────────────
+   4. Ticker tape
+──────────────────────────────────────────────── */
+const TICKERS = [
+  { n: 'BTC/USDT',  p: '97,234',    c: '+2.34%', up: true  },
+  { n: 'ETH/USDT',  p: '3,421',     c: '+1.87%', up: true  },
+  { n: 'S&P 500',   p: '5,891',     c: '+0.43%', up: true  },
+  { n: 'MERVAL',    p: '2,341,500', c: '+1.12%', up: true  },
+  { n: 'SOL/USDT',  p: '198.45',    c: '-0.87%', up: false },
+  { n: 'GGAL',      p: '7,230',     c: '+3.21%', up: true  },
+  { n: 'BNB/USDT',  p: '423.10',    c: '+0.54%', up: true  },
+  { n: 'YPF',       p: '42,100',    c: '-1.23%', up: false },
+  { n: 'NASDAQ',    p: '19,234',    c: '+0.78%', up: true  },
+  { n: 'XRP/USDT',  p: '2.34',      c: '+4.12%', up: true  },
+  { n: 'ADA/USDT',  p: '0.89',      c: '+1.56%', up: true  },
+  { n: 'BYMA',      p: '1,200',     c: '+0.55%', up: true  },
+];
+
+const ticker = document.getElementById('ticker');
+[...TICKERS, ...TICKERS].forEach(t => {
+  const d = document.createElement('span');
+  d.className = 'tick-item';
+  d.innerHTML = `
+    <span class="tick-name">${t.n}</span>
+    <span class="tick-price">${t.p}</span>
+    <span class="${t.up ? 'tick-up' : 'tick-dn'}">${t.up ? '▲' : '▼'} ${t.c}</span>
+    <span class="tick-sep">|</span>`;
+  ticker.appendChild(d);
+});
+</script>
+</body>
+</html>
